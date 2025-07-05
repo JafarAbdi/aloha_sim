@@ -75,6 +75,11 @@ WRIST_CAMERA_POSITION: tuple[float, float, float] = (
     -0.0095955,
 )
 
+LEFT_GRIPPER_CTRL_IDX: int = 6
+RIGHT_GRIPPER_CTRL_IDX: int = 13
+LEFT_GRIPPER_QPOS_IDX: list[int] = [6, 7]
+RIGHT_GRIPPER_QPOS_IDX: list[int] = [14, 15]
+
 
 @dataclasses.dataclass(frozen=True)
 class GripperLimit:
@@ -131,6 +136,8 @@ _ALL_JOINTS: tuple[str, ...] = (
     r'right\right_finger',
 )
 
+RIGHT_TCP = "right\\gripper"
+LEFT_TCP = "left\\gripper"
 
 class GeomGroup(enum.IntFlag):
   NONE = 0
@@ -141,6 +148,29 @@ class GeomGroup(enum.IntFlag):
   LEFT = enum.auto()
   RIGHT = enum.auto()
 
+def qpos_to_ctrl(qpos):
+  assert len(qpos) == len(_ALL_JOINTS)
+  # Convert sim ctrl values to the environment-level actions
+  left_gripper_ctrl = qpos[6] # Or 7 both are the same
+  right_gripper_ctrl = qpos[14] # Or 15 both are the same
+
+  left_gripper_cmd = AlohaTask.convert_gripper(
+      left_gripper_ctrl,
+      'sim_qpos',
+      'sim_ctrl',
+  )
+
+  right_gripper_cmd = AlohaTask.convert_gripper(
+      right_gripper_ctrl,
+      'sim_qpos',
+      'sim_ctrl',
+  )
+  return np.concatenate([
+      qpos[:6],
+      [left_gripper_cmd],
+      qpos[8:14],
+      [right_gripper_cmd],
+  ])
 
 class AlohaTask(composer.Task):
   """The base aloha task."""

@@ -19,7 +19,7 @@ python = ">=3.11,<3.12"
 eigen = ">=3.4.0,<4"
 
 [pypi-dependencies]
-aloha_sim = { path = ".", editable = true, extras = ["dev"]}
+aloha_sim = { path = ".", editable = true, extras = ["dev"] }
 
 [feature.lint]
 dependencies = { pre-commit = "*", prettier = "*", taplo = "*" }
