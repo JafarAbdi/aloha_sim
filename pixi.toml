@@ -1,0 +1,29 @@
+[workspace]
+authors = ["JafarAbdi <jafar.uruc@gmail.com>"]
+channels = ["conda-forge"]
+name = "aloha_sim"
+platforms = ["linux-64"]
+version = "1.0.0"
+
+[tasks]
+viewer = { cmd = [
+  "python",
+  "aloha_sim/viewer.py",
+  "--policy=no_policy",
+], env = { MUJOCO_GL = "egl" } }
+
+
+[dependencies]
+python = ">=3.11,<3.12"
+# Used for time_optimal_trajectory_generation_py
+eigen = ">=3.4.0,<4"
+
+[pypi-dependencies]
+aloha_sim = { path = ".", editable = true, extras = ["dev"]}
+
+[feature.lint]
+dependencies = { pre-commit = "*", prettier = "*", taplo = "*" }
+tasks = { lint = "pre-commit run -a" }
+
+[environments]
+lint = { features = ["lint"], no-default-feature = true }
