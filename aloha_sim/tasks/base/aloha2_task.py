@@ -36,11 +36,11 @@ from numpy import typing as npt
 
 
 HOME_CTRL: npt.NDArray[float] = np.array(
-    [0.0, -0.96, 1.16, 0.0, -0.3, 0.0, 0.002]
+    [0.0, -0.96, 1.16, 0.0, -0.3, 0.0, 0.037]
 )
 HOME_CTRL.setflags(write=False)
 HOME_QPOS: npt.NDArray[float] = np.array(
-    [0.0, -0.959, 1.182, 0.0, -0.274, 0.0, 0.0082, 0.0082]
+    [0.0, -0.959, 1.182, 0.0, -0.274, 0.0, 0.037, 0.037]
 )
 HOME_QPOS.setflags(write=False)
 
@@ -302,8 +302,8 @@ class AlohaTask(composer.Task):
     maximum[0] = maximum[7] = self._waist_joint_limit
 
     # Gripper actions are never delta actions.
-    minimum[6] = minimum[13] = GRIPPER_LIMITS['follower'].close
-    maximum[6] = maximum[13] = GRIPPER_LIMITS['follower'].open
+    minimum[6] = minimum[13] = GRIPPER_LIMITS['sim_ctrl'].close
+    maximum[6] = maximum[13] = GRIPPER_LIMITS['sim_ctrl'].open
 
     return specs.BoundedArray(
         shape=(14,),
@@ -349,10 +349,10 @@ class AlohaTask(composer.Task):
     right_gripper_cmd = np.array([right_gripper])
 
     left_gripper_ctrl = AlohaTask.convert_gripper(
-        left_gripper_cmd, 'follower', 'sim_ctrl'
+        left_gripper_cmd, 'sim_qpos', 'sim_ctrl'
     )
     right_gripper_ctrl = AlohaTask.convert_gripper(
-        right_gripper_cmd, 'follower', 'sim_ctrl'
+        right_gripper_cmd, 'sim_qpos', 'sim_ctrl'
     )
 
     np.copyto(physics.data.ctrl[6:7], left_gripper_ctrl)
@@ -402,10 +402,10 @@ class AlohaObservables(composer.Observables):
       right_gripper_pos = physics.data.qpos[14]
 
       left_gripper_qpos = AlohaTask.convert_gripper(
-          left_gripper_pos, 'sim_qpos', 'follower'
+          left_gripper_pos, 'sim_qpos', 'sim_qpos'
       )
       right_gripper_qpos = AlohaTask.convert_gripper(
-          right_gripper_pos, 'sim_qpos', 'follower'
+          right_gripper_pos, 'sim_qpos', 'sim_qpos'
       )
 
       return np.concatenate([
@@ -428,13 +428,13 @@ class AlohaObservables(composer.Observables):
       left_gripper_cmd = AlohaTask.convert_gripper(
           left_gripper_ctrl,
           'sim_ctrl',
-          'follower',
+          'sim_qpos',
       )
 
       right_gripper_cmd = AlohaTask.convert_gripper(
           right_gripper_ctrl,
           'sim_ctrl',
-          'follower',
+          'sim_qpos',
       )
       return np.concatenate([
           physics.data.ctrl[:6],
