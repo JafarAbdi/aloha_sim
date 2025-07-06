@@ -124,5 +124,11 @@ exclude = [
   "examples/viewer.py",
 ]
 
+[lint.per-file-ignores]
+"**.ipynb" = [
+  "ERA001", # commented-out-code (ERA001)
+  "D",
+]
+
 [lint.pydocstyle]
 convention = "google"

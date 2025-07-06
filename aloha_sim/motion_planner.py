@@ -4,6 +4,7 @@ import copy
 import enum
 import logging
 import platform
+from inspect import isclass
 
 import mujoco
 import numpy as np
@@ -38,13 +39,11 @@ def get_ompl_planners() -> list[str]:
     Returns:
         List of OMPL planners.
     """
-    from inspect import isclass
-
     module = ompl.geometric
     planners = []
     for obj in dir(module):
         planner_name = f"{module.__name__}.{obj}"
-        planner = eval(planner_name)  # noqa: S307, PGH001
+        planner = eval(planner_name)  # noqa: S307
         if isclass(planner) and issubclass(planner, ompl.base.Planner):
             planners.append(
                 planner_name.split("ompl.geometric.")[1],
@@ -85,7 +84,7 @@ class MotionPlanner:
 
     def _get_planner(self, planner):
         try:
-            return eval(  # noqa: S307, PGH001
+            return eval(  # noqa: S307
                 f"og.{planner}(self._setup.getSpaceInformation())",
             )
         except AttributeError:
