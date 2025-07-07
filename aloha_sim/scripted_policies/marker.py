@@ -296,7 +296,16 @@ class Policy:
                 action_qpos = self._reset_qpos
             else:
                 # Plan a new trajectory for the current state
-                self._current_trajectory = self._plan_for_current_state()
+                try:
+                    self._current_trajectory = self._plan_for_current_state()
+                except RuntimeError as e:
+                    print(f"Error during planning: {e}")
+                    # If planning fails, return the reset position
+                    self._waypoint_index = 0
+                    self._current_trajectory = []
+                    self._state = State.DONE
+                    msg = "Planning failed, resetting to done state."
+                    raise RuntimeError(msg) from e
                 self._waypoint_index = 0
 
                 # Get the first action of the new trajectory

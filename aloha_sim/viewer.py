@@ -247,7 +247,7 @@ def main(argv: Sequence[str]) -> None:
       time_stepping = 0
       sync_time = 0
 
-      while not timestep.last():
+      while not policy.is_done():
         # For debugging purposes, you can visualize the current frame
         # > viewer_handle.user_scn.ngeom = 0
         # > add_frame_to_scene(viewer_handle.user_scn, get_pick_pose(viewer_data))
@@ -263,7 +263,11 @@ def main(argv: Sequence[str]) -> None:
           _GLOBAL_STATE['_IS_RUNNING'] = True
         if _GLOBAL_STATE['_IS_RUNNING'] or _GLOBAL_STATE['_SINGLE_STEP']:
           frame_start_time = time.time()
-          action = policy.step(timestep.observation)
+          try:
+              action = policy.step(timestep.observation)
+          except Exception as e:
+              logging.error('Policy step failed: %s', e)
+              input('Press Enter to continue...')
           query_end_time = time.time()
           time_inference += query_end_time - frame_start_time
 

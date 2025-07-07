@@ -151,7 +151,9 @@ class Aloha:
                     target_pose,
                     self._disable_collisions,
                 )
-                assert ik_solution is not None
+                if ik_solution is None:
+                    print("Failed to find IK solution")
+                    return None
                 return self.plan_to_qpos(joint_group, data, ik_solution)
             case Planner.CARTESIAN:
                 start_pose = np.eye(4)
@@ -167,7 +169,9 @@ class Aloha:
                         pose,
                         self._disable_collisions,
                     )
-                    assert ik_solution is not None
+                    if ik_solution is None:
+                        print("Failed to find IK solution for pose")
+                        return None
                     waypoints.append(ik_solution)
                 if (
                     trajectory := generate_time_optimal_trajectory(
