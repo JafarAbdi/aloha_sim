@@ -5,7 +5,7 @@ import numpy as np
 
 from aloha_sim.cartesian_interpolator import cartesian_interpolator
 from aloha_sim.ik_solver import IKSolver
-from aloha_sim.joint_group import JointGroup
+from aloha_sim.joint_group import Gripper, JointGroup
 from aloha_sim.motion_planner import (
     MotionPlanner,
     Planner,
@@ -13,6 +13,12 @@ from aloha_sim.motion_planner import (
 )
 from aloha_sim.tasks.base.aloha2_task import (
     _ALL_JOINTS,
+    LEFT_ARM_JOINTS,
+    LEFT_GRIPPER_CTRL_IDX,
+    LEFT_GRIPPER_QPOS_IDX,
+    LEFT_TCP,
+    RIGHT_ARM_JOINTS,
+    RIGHT_GRIPPER_CTRL_IDX,
     RIGHT_GRIPPER_QPOS_IDX,
     RIGHT_TCP,
     SIM_GRIPPER_CTRL_CLOSE,
@@ -45,21 +51,42 @@ class Aloha:
             model=model,
             joint_names=list(_ALL_JOINTS),
         )
+        self.left_arm = JointGroup(
+            model=model,
+            joint_names=LEFT_ARM_JOINTS,
+            gripper=Gripper(
+                qpos_index=LEFT_GRIPPER_QPOS_IDX[0],
+                qpos_open=SIM_GRIPPER_QPOS_OPEN,
+                qpos_close=SIM_GRIPPER_QPOS_CLOSE,
+                ctrl_index=LEFT_GRIPPER_CTRL_IDX,
+                ctrl_open=SIM_GRIPPER_CTRL_OPEN,
+                ctrl_close=SIM_GRIPPER_CTRL_CLOSE,
+            ),
+            tcp_name=LEFT_TCP,
+        )
+        self.right_arm = JointGroup(
+            model=model,
+            joint_names=RIGHT_ARM_JOINTS,
+            gripper=Gripper(
+                qpos_index=RIGHT_GRIPPER_QPOS_IDX[0],
+                qpos_open=SIM_GRIPPER_QPOS_OPEN,
+                qpos_close=SIM_GRIPPER_QPOS_CLOSE,
+                ctrl_index=RIGHT_GRIPPER_CTRL_IDX,
+                ctrl_open=SIM_GRIPPER_CTRL_OPEN,
+                ctrl_close=SIM_GRIPPER_CTRL_CLOSE,
+            ),
+            tcp_name=RIGHT_TCP,
+        )
         self._disable_collisions: set[tuple[str, str]] = disable_collisions or set()
-        self.motion_planner = MotionPlanner(self.arms)
-        self.ik_solver = IKSolver(self.arms)
-
-    def open_gripper(self, data: mujoco.MjData) -> None:
-        """Open the gripper by setting the qpos of the right gripper joint."""
-        qpos = data.qpos[self.arms.qpos_indices]
-        qpos[RIGHT_GRIPPER_QPOS_IDX] = SIM_GRIPPER_QPOS_OPEN
-        return qpos
-
-    def close_gripper(self, data: mujoco.MjData) -> None:
-        """Close the gripper by setting the qpos of the right gripper joint."""
-        qpos = data.qpos[self.arms.qpos_indices]
-        qpos[RIGHT_GRIPPER_QPOS_IDX] = SIM_GRIPPER_QPOS_CLOSE
-        return qpos
+        self.motion_planners: dict[JointGroup, MotionPlanner] = {
+            self.arms: MotionPlanner(self.arms),
+            self.left_arm: MotionPlanner(self.left_arm),
+            self.right_arm: MotionPlanner(self.right_arm),
+        }
+        self.ik_solvers: dict[JointGroup, IKSolver] = {
+            self.left_arm: IKSolver(self.left_arm),
+            self.right_arm: IKSolver(self.right_arm),
+        }
 
     def disable_collisions(self, bodies: list[tuple[str, str]]) -> None:
         """Disable collision checks between a list of body pairs."""
@@ -82,15 +109,16 @@ class Aloha:
 
     def plan_to_qpos(
         self,
+        joint_group: JointGroup,
         data: mujoco.MjData,
         goal_qpos: np.ndarray,
     ):
         """Plan a trajectory to a given joint position goal."""
-        assert len(self.arms.joint_names) == len(goal_qpos)
+        assert len(joint_group.joint_names) == len(goal_qpos)
         if (
-            waypoints := self.motion_planner.plan(
+            waypoints := self.motion_planners[joint_group].plan(
                 data,
-                goal_qpos[self.arms.qpos_indices],
+                goal_qpos,
                 self._disable_collisions,
             )
         ) is None:
@@ -108,21 +136,23 @@ class Aloha:
 
     def plan_to_pose(
         self,
+        joint_group: JointGroup,
         data: mujoco.MjData,
         target_pose: np.ndarray,
         planner: Planner,
     ):
         """Plan a trajectory to a given pose using the specified planner."""
         assert target_pose.shape == (4, 4), "Pose must be a 4x4 matrix."
+        ik_solver = self.ik_solvers[joint_group]
         match planner:
             case Planner.OMPL:
-                ik_solution = self.ik_solver.solve(
+                ik_solution = ik_solver.solve(
                     data,
                     target_pose,
                     self._disable_collisions,
                 )
                 assert ik_solution is not None
-                return self.plan_to_qpos(data, ik_solution)
+                return self.plan_to_qpos(joint_group, data, ik_solution)
             case Planner.CARTESIAN:
                 start_pose = np.eye(4)
                 tcp_site = data.site(RIGHT_TCP)
@@ -132,7 +162,7 @@ class Aloha:
                 print(f"Cartesian interpolator generated {len(poses)} waypoints")
                 waypoints = []
                 for pose in poses:
-                    ik_solution = self.ik_solver.solve(
+                    ik_solution = ik_solver.solve(
                         data,
                         pose,
                         self._disable_collisions,

@@ -113,22 +113,7 @@ extend-ignore = [
   "T201",    # flake8-print
   "D100",    # undocumented-public-module
 ]
-exclude = [
-  "mj_dogo/env.py",
-  "mj_dogo/task.py",
-  "mj_dogo/robot.py",
-  "mj_dogo/utils.py",
-  "mj_dogo/viewer.py",
-  "mj_dogo/tasks/*.py",
-  "examples/plan.py",
-  "examples/viewer.py",
-]
-
-[lint.per-file-ignores]
-"**.ipynb" = [
-  "ERA001", # commented-out-code (ERA001)
-  "D",
-]
+exclude = ["*.ipynb"]
 
 [lint.pydocstyle]
 convention = "google"

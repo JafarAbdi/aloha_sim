@@ -138,6 +138,8 @@ _ALL_JOINTS: tuple[str, ...] = (
 
 RIGHT_TCP = "right\\gripper"
 LEFT_TCP = "left\\gripper"
+LEFT_ARM_JOINTS = _ALL_JOINTS[:8]
+RIGHT_ARM_JOINTS = _ALL_JOINTS[8:16]
 
 class GeomGroup(enum.IntFlag):
   NONE = 0
@@ -147,6 +149,42 @@ class GeomGroup(enum.IntFlag):
   OBJECT = enum.auto()
   LEFT = enum.auto()
   RIGHT = enum.auto()
+
+def left_qpos_to_ctrl(ctrl, qpos):
+  assert len(qpos) == len(LEFT_ARM_JOINTS)
+  assert len(ctrl) == 14
+  # Convert sim ctrl values to the environment-level actions
+  left_gripper_ctrl = qpos[6] # Or 7 both are the same
+
+  left_gripper_cmd = AlohaTask.convert_gripper(
+      left_gripper_ctrl,
+      'sim_qpos',
+      'sim_ctrl',
+  )
+
+  return np.concatenate([
+      qpos[:6],
+      [left_gripper_cmd],
+      ctrl[7:14],
+  ])
+
+def right_qpos_to_ctrl(ctrl, qpos):
+    assert len(qpos) == len(RIGHT_ARM_JOINTS)
+    assert len(ctrl) == 14
+    # Convert sim ctrl values to the environment-level actions
+    right_gripper_ctrl = qpos[6] # Or 7 both are the same
+    
+    right_gripper_cmd = AlohaTask.convert_gripper(
+        right_gripper_ctrl,
+        'sim_qpos',
+        'sim_ctrl',
+    )
+    
+    return np.concatenate([
+        ctrl[:7],
+        qpos[:6],
+        [right_gripper_cmd],
+    ])
 
 def qpos_to_ctrl(qpos):
   assert len(qpos) == len(_ALL_JOINTS)

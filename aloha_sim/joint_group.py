@@ -1,3 +1,4 @@
+import functools
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -9,8 +10,28 @@ import numpy as np
 class Gripper:
     """A class to represent a gripper joint."""
 
-    joint_index: int
-    qpos_to_ctrl: Callable[[np.ndarray], float]
+    qpos_index: int
+    qpos_open: float
+    qpos_close: float
+    ctrl_index: int
+    ctrl_open: float
+    ctrl_close: float
+    qpos_to_ctrl: Callable[[np.ndarray], float] = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Initialize the qpos_to_ctrl function."""
+        assert self.qpos_close < self.qpos_open
+        assert self.ctrl_close < self.ctrl_open
+        object.__setattr__(
+            self,
+            "qpos_to_ctrl",
+            functools.partial(
+                np.interp,
+                # xp has to be sorted
+                xp=[self.qpos_close, self.qpos_open],
+                fp=[self.ctrl_close, self.ctrl_open],
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,7 +40,8 @@ class JointGroup:
 
     model: mujoco.MjModel
     joint_names: list[str]
-    # > gripper: Gripper
+    gripper: Gripper | None = None
+    tcp_name: str | None = None
     joint_indices: list[int] = field(init=False)
     qpos_indices: list[int] = field(init=False)
     qvel_indices: list[int] = field(init=False)
@@ -47,3 +69,19 @@ class JointGroup:
             "qpos_range",
             self.model.jnt_range[self.joint_indices],
         )
+
+    def open_gripper(self, qpos) -> None:
+        """Open the gripper."""
+        assert len(qpos) == self.model.nq, "qpos must have the same length as model.nq"
+        qpos[self.gripper.qpos_index] = self.gripper.qpos_open
+        return qpos[self.qpos_indices]
+
+    def close_gripper(self, qpos) -> None:
+        """Close the gripper."""
+        assert len(qpos) == self.model.nq, "qpos must have the same length as model.nq"
+        qpos[self.gripper.qpos_index] = self.gripper.qpos_close
+        return qpos[self.qpos_indices]
+
+    def __hash__(self) -> int:
+        """Return a hash of the joint group."""
+        return hash(tuple(self.joint_names))

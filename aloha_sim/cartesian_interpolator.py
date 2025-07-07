@@ -9,7 +9,6 @@ import pinocchio
 # Cartesian interpolation constants
 MAX_TRANSLATIONAL_STEP = 0.01  # m
 MAX_ANGULAR_STEP = 0.01  # radians
-EPSILON = 1e-6
 
 
 def cartesian_interpolator(
@@ -37,12 +36,10 @@ def cartesian_interpolator(
         pinocchio.Quaternion(start_pose.rotation),
         pinocchio.Quaternion(end_pose.rotation),
     )
-    if translational_distance < EPSILON and angular_distance < EPSILON:
-        return [start_pose.homogeneous, end_pose.homogeneous]
 
     translational_steps = math.ceil(translational_distance / MAX_TRANSLATIONAL_STEP)
     angular_steps = math.ceil(angular_distance / MAX_ANGULAR_STEP)
-    steps = max(translational_steps, angular_steps)
+    steps = max(translational_steps, angular_steps, 1)
 
     curve = ndcurves.SE3Curve(start_pose, end_pose, 0, 1)
-    return [curve(t) for t in np.linspace(0, 1, steps)]
+    return [curve(t) for t in np.linspace(0, 1, steps + 1)]

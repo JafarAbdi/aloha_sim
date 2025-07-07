@@ -3,14 +3,13 @@ import mujoco
 import numpy as np
 
 from aloha_sim.joint_group import JointGroup
-from aloha_sim.tasks.base.aloha2_task import RIGHT_TCP
 from aloha_sim.utils.collision_checking import check_collision
 
 # IK parameters
 SOLVER = "daqp"
 POSITION_THRESHOLD = 1e-2
-ORIENTATIOB_THRESHOLD = 1e-3
-MAX_ITERS = 100
+ORIENTATIOB_THRESHOLD = 5e-3
+MAX_ITERS = 50
 
 
 class IKSolver:
@@ -33,7 +32,7 @@ class IKSolver:
 
         # Define tasks
         end_effector_task = mink.FrameTask(
-            frame_name=RIGHT_TCP,
+            frame_name=self.joint_group.tcp_name,
             frame_type="site",
             position_cost=1.0,
             orientation_cost=1.0,
@@ -66,7 +65,9 @@ class IKSolver:
                     configuration.data,
                     disable_collisions,
                 ):
-                    print(f"IK solution for {RIGHT_TCP} collides with the environment.")
+                    print(
+                        f"IK solution for {self.joint_group.tcp_name} collides with the environment.",
+                    )
                     check_collision(
                         self.joint_group.model,
                         configuration.data,
@@ -76,7 +77,7 @@ class IKSolver:
                     return None
                 return configuration.data.qpos[self.joint_group.qpos_indices]
         print(
-            f"Failed to find IK solution for {RIGHT_TCP} after {MAX_ITERS} iterations."
+            f"Failed to find IK solution for {self.joint_group.tcp_name} after {MAX_ITERS} iterations."
             f"Linear error: {np.linalg.norm(err[:3])}, Angular error: {np.linalg.norm(err[3:])}",
         )
         return None

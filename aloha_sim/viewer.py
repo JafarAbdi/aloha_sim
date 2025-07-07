@@ -50,6 +50,7 @@ from rich import panel
 from rich import prompt
 from rich import text
 import tree
+from aloha_sim.scripted_policies.marker import Policy
 
 
 ActionSpec: TypeAlias = specs.Array
@@ -171,7 +172,7 @@ def main(argv: Sequence[str]) -> None:
 
   # Instantiate the policy.
   if _POLICY.value == 'no_policy':
-    policy = NoPolicy()
+    policy = Policy(env) # NoPolicy()
   else:
     try:
       print('Creating policy...')
@@ -247,6 +248,9 @@ def main(argv: Sequence[str]) -> None:
       sync_time = 0
 
       while not timestep.last():
+        # For debugging purposes, you can visualize the current frame
+        # > viewer_handle.user_scn.ngeom = 0
+        # > add_frame_to_scene(viewer_handle.user_scn, get_pick_pose(viewer_data))
         steps += 1
         if _GLOBAL_STATE['_ASKING_INSTRUCTION']:
           instruction = prompt.Prompt.ask(
