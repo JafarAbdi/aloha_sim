@@ -164,7 +164,6 @@ class State(IntEnum):
     APPROACH = auto()
     CLOSE_GRIPPER = auto()
     RETREAT = auto()
-    GO_TO_RESET_POSE = auto()
     DONE = auto()
 
 
@@ -263,15 +262,6 @@ class Policy:
                 self.env.physics.data.ptr,
                 self._approach_pose,
                 Planner.CARTESIAN,
-            )
-        elif state == State.GO_TO_RESET_POSE:
-            # Action before trajectory: re-enable table collisions after lifting
-            print("Re-enabling table collisions.")
-            self.aloha.enable_collisions(GRIPPER_TABLE_COLLISIONS)
-            trajectory = self.aloha.plan_to_qpos(
-                self.aloha.right_arm,
-                self.env.physics.data.ptr,
-                self._reset_qpos,
             )
         elif state == State.DONE:
             # No new trajectory; stay in the final position
