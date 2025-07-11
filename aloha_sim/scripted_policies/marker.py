@@ -25,6 +25,10 @@ GRIPPER_TABLE_COLLISIONS = {
 }
 
 
+class ScriptedPolicyError(Exception):
+    """Custom exception for errors in the scripted policy."""
+
+
 # Assumptions:
 # - TCP (Tool Center Point) Convention:
 # X-axis: Forward along tool approach direction
@@ -268,8 +272,7 @@ class Policy:
             return [self._reset_qpos]
 
         if trajectory is None:
-            msg = f"Motion planning failed for state: {state.name}"
-            raise RuntimeError(msg)
+            print(f"Motion planning failed for state: {state.name}")
 
         return trajectory
 
@@ -286,16 +289,15 @@ class Policy:
                 action_qpos = self._reset_qpos
             else:
                 # Plan a new trajectory for the current state
-                try:
-                    self._current_trajectory = self._plan_for_current_state()
-                except RuntimeError as e:
-                    print(f"Error during planning: {e}")
-                    # If planning fails, return the reset position
+                self._current_trajectory = self._plan_for_current_state()
+                if not self._current_trajectory:
                     self._waypoint_index = 0
                     self._current_trajectory = []
+                    previous_state = self._state
                     self._state = State.DONE
-                    msg = "Planning failed, resetting to done state."
-                    raise RuntimeError(msg) from e
+                    msg = f"Failed to plan trajectory for state: {previous_state.name}"
+                    raise ScriptedPolicyError(msg)
+
                 self._waypoint_index = 0
 
                 # Get the first action of the new trajectory
