@@ -35,16 +35,6 @@ import numpy as np
 from numpy import typing as npt
 
 
-HOME_CTRL: npt.NDArray[float] = np.array(
-    [0.0, -0.96, 1.16, 0.0, -0.3, 0.0, 0.037]
-)
-HOME_CTRL.setflags(write=False)
-HOME_QPOS: npt.NDArray[float] = np.array(
-    [0.0, -0.959, 1.182, 0.0, -0.274, 0.0, 0.037, 0.037]
-)
-HOME_QPOS.setflags(write=False)
-
-
 # The linear displacement that corresponds to fully open and closed gripper
 # in sim. Note that the sim model does not model the dynamixel values, but
 # rather the linear displacement of the fingers in meters.
@@ -68,6 +58,16 @@ FOLLOWER_GRIPPER_CLOSE: float = -0.06135
 
 LEADER_GRIPPER_OPEN: float = 0.78
 LEADER_GRIPPER_CLOSE: float = -0.04
+
+HOME_CTRL: npt.NDArray[float] = np.array(
+    [0.0, -0.96, 1.16, 0.0, -0.3, 0.0, SIM_GRIPPER_CTRL_OPEN]
+)
+HOME_CTRL.setflags(write=False)
+HOME_QPOS: npt.NDArray[float] = np.array(
+    [0.0, -0.959, 1.182, 0.0, -0.274, 0.0, SIM_GRIPPER_QPOS_OPEN, SIM_GRIPPER_QPOS_OPEN]
+)
+HOME_QPOS.setflags(write=False)
+
 
 WRIST_CAMERA_POSITION: tuple[float, float, float] = (
     -0.011,
