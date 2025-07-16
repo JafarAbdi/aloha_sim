@@ -23,6 +23,10 @@ dependencies = [
     "ompl @ https://github.com/ompl/ompl/releases/download/prerelease/ompl-1.8.0-cp311-cp311-manylinux_2_28_x86_64.whl",
     "time_optimal_trajectory_generation_py @ git+https://github.com/JafarAbdi/time_optimal_trajectory_generation_py/",
     "ndcurves",
+    "ruckig",
+    # 0.6.3 adds support for numpy > 2.0:
+    # https://github.com/hungpham2511/toppra/pull/259
+    "toppra >= 0.6.3",
 ]
 
 [project.optional-dependencies]

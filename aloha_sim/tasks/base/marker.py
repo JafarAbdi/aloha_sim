@@ -33,17 +33,18 @@ _LEFT_GRIPPER_ID = r'left\gripper_link'
 _RIGHT_GRIPPER_ID = r'right\gripper_link'
 
 pen_uniform_position = distributions.Uniform(
-    low=[-0.2, -0.2, _TABLE_HEIGHT + _PEN_RESET_HEIGHT],
-    high=[0.225, 0.225, _TABLE_HEIGHT + _PEN_RESET_HEIGHT],
+    low=[0.1, -0.05, _TABLE_HEIGHT + _PEN_RESET_HEIGHT],
+    high=[0.15, 0.05, _TABLE_HEIGHT + _PEN_RESET_HEIGHT],
     single_sample=True,
 )
 pen_z_rotation = rotations.QuaternionFromAxisAngle(
     axis=(0.0, 0.0, 1.0),
-    angle=distributions.Uniform(
-        -np.pi * 0.4 - np.pi * 0.5 + np.pi,
-        np.pi * 0.4 - np.pi * 0.5 + np.pi,
-        single_sample=True,
-    ),
+    angle=-np.pi * 0.75,
+    # angle=distributions.Uniform(
+    #     -np.pi * 0.4 - np.pi * 0.5 + np.pi,
+    #     np.pi * 0.4 - np.pi * 0.5 + np.pi,
+    #     single_sample=True,
+    # ),
 )
 
 

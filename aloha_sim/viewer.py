@@ -53,13 +53,26 @@ from rich import prompt
 from rich import text
 import tree
 from aloha_sim.scripted_policies.marker import Policy as ScriptedPolicy
-from robot_learning.constants import CONFIG_NAME, DATASET_METADATA_FILE
+from robot_learning.constants import (
+    CONFIG_NAME,
+    DATASET_METADATA_FILE,
+    DATASET_STATISTICS_FILE,
+)
 from robot_learning.data_normalizer import DataNormalizer
-from robot_learning.dataset import DatasetMetadata
+from robot_learning.dataset import DatasetMetadata, DatasetStatistics
+from robot_learning.utils import pretty_print_omegaconfig
 from omegaconf import OmegaConf, DictConfig
 from aloha_sim.tasks.base.aloha2_task import HOME_CTRL
 from torchvision.transforms import v2 as torchvision_transforms
 import hydra
+from robot_learning.model_utils import timestep_observation_to_tensor
+from aloha_sim.trajectory_parameterization import (
+    ToppraParameterizer,
+    RuckigParameterizer,
+    TotgParameterizer,
+)
+from aloha_sim.aloha import RESAMPLE_DT
+from robot_learning.configs.train import TrainConfig
 
 
 ActionSpec: TypeAlias = specs.Array
@@ -165,35 +178,9 @@ class TrainedPolicy:
             return np.concatenate(
                 [HOME_CTRL, action]
             )  # Return the first action in the batch
-        batched_obs = {}
-        batched_obs[self.dataset_metadata.action] = (
-            torch.as_tensor(
-                observation[self.dataset_metadata.action],
-                dtype=torch.float32,
-            )
-            .unsqueeze(0)  # Add batch dimension
-            .to("cuda")
+        batched_obs = timestep_observation_to_tensor(
+            observation, self.dataset_metadata, "cuda"
         )
-        batched_obs[self.dataset_metadata.state_observation] = (
-            torch.as_tensor(
-                observation[self.dataset_metadata.state_observation],
-                dtype=torch.float32,
-            )
-            .unsqueeze(0)  # Add batch dimension
-            .to("cuda")
-        )
-        for cam in self.dataset_metadata.image_observations:
-            batched_obs[cam] = (
-                torch.as_tensor(
-                    observation[cam],
-                    dtype=torch.float32,
-                )
-                .permute(2, 0, 1)
-                .unsqueeze(0)
-            )  # HxWxC to CxHxW and add batch dimension
-            if self.image_preprocessing is not None:
-                batched_obs[cam] = self.image_preprocessing(batched_obs[cam])
-            batched_obs[cam] = batched_obs[cam].to("cuda")
 
         for key, transform in self.proprio_preprocessing.items():
             if key in batched_obs:
@@ -210,9 +197,30 @@ class TrainedPolicy:
             action_pred,
             [self.dataset_metadata.action],
         )
-        self.current_actions = (
-            denormalized_actions[self.dataset_metadata.action].cpu().numpy().squeeze()
+        actions = (
+            denormalized_actions[self.dataset_metadata.action].cpu().numpy().squeeze(0)
         )
+        self.current_actions = actions
+        max_velocity = np.ones_like(actions[0]) * np.pi
+        max_acceleration = np.ones_like(actions[0]) * np.pi
+        max_jerk = np.ones_like(actions[0])
+        totg = TotgParameterizer(
+            RESAMPLE_DT,
+            max_velocity,
+            max_acceleration,
+        )
+        toppra = ToppraParameterizer(
+            RESAMPLE_DT,
+            max_velocity,
+            max_acceleration,
+        )
+        ruckig = RuckigParameterizer(
+            RESAMPLE_DT,
+            max_velocity,
+            max_acceleration,
+            max_jerk,
+        )
+        # self.current_actions = totg.run(actions)
         self.current_index = 1
         return np.concatenate(
             [HOME_CTRL, self.current_actions[0]]
@@ -227,7 +235,12 @@ class TrainedPolicy:
 
     def setup(self) -> None:
         """Load the model from the checkpoint."""
-        cfg = OmegaConf.load(self.checkpoint / CONFIG_NAME)
+        with hydra.initialize_config_dir(
+            config_dir=str(pathlib.Path.cwd() / self.checkpoint), version_base=None
+        ):
+            scheme = OmegaConf.structured(TrainConfig)
+            cfg = OmegaConf.merge(scheme, OmegaConf.load(self.checkpoint / CONFIG_NAME))
+        pretty_print_omegaconfig(cfg)
         model_cls = hydra.utils.get_class(cfg.model._target_)
         model_params = {k: v for k, v in cfg.model.items() if k != "_target_"}
         # Instantiate model parameters if they are Hydra objects
@@ -237,8 +250,14 @@ class TrainedPolicy:
         self.dataset_metadata = DatasetMetadata.from_file(
             self.checkpoint / DATASET_METADATA_FILE
         )
-        self.data_normalizer = DataNormalizer.from_directory(self.checkpoint)
-        self.data_normalizer = self.data_normalizer.to("cuda")
+        dataset_statistics = DatasetStatistics.from_file(
+            self.checkpoint / DATASET_STATISTICS_FILE,
+        )
+        self.data_normalizer = DataNormalizer(
+            dataset_statistics,
+            hydra.utils.instantiate(cfg.data_normalizer),
+            device="cuda",
+        )
         self.model = model_cls.from_pretrained(
             self.checkpoint,
             **model_params,
@@ -411,8 +430,6 @@ def main(argv: Sequence[str]) -> None:
                     frame_start_time = time.time()
                     try:
                         action = policy.step(timestep.observation)
-                        print(np.round(action, 3))
-                        input("Press Enter to continue...")
                     except Exception as e:
                         logging.error("Policy step failed: %s", e)
                         input("Press Enter to continue...")
