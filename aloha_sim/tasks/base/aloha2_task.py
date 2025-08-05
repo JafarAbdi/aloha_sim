@@ -59,14 +59,25 @@ FOLLOWER_GRIPPER_CLOSE: float = -0.06135
 LEADER_GRIPPER_OPEN: float = 0.78
 LEADER_GRIPPER_CLOSE: float = -0.04
 
-HOME_CTRL: npt.NDArray[float] = np.array(
+HOME_CTRL_CLOSE: npt.NDArray[float] = np.array(
+    [0.0, -0.96, 1.16, 0.0, -0.3, 0.0, SIM_GRIPPER_CTRL_CLOSE]
+)
+HOME_CTRL_CLOSE.setflags(write=False)
+HOME_QPOS_CLOSE: npt.NDArray[float] = np.array(
+    [0.0, -0.959, 1.182, 0.0, -0.274, 0.0, SIM_GRIPPER_QPOS_CLOSE, SIM_GRIPPER_QPOS_CLOSE]
+)
+HOME_QPOS_CLOSE.setflags(write=False)
+
+HOME_CTRL_OPEN: npt.NDArray[float] = np.array(
     [0.0, -0.96, 1.16, 0.0, -0.3, 0.0, SIM_GRIPPER_CTRL_OPEN]
 )
-HOME_CTRL.setflags(write=False)
-HOME_QPOS: npt.NDArray[float] = np.array(
+HOME_CTRL_OPEN.setflags(write=False)
+HOME_QPOS_OPEN: npt.NDArray[float] = np.array(
     [0.0, -0.959, 1.182, 0.0, -0.274, 0.0, SIM_GRIPPER_QPOS_OPEN, SIM_GRIPPER_QPOS_OPEN]
 )
-HOME_QPOS.setflags(write=False)
+HOME_QPOS_OPEN.setflags(write=False)
+
+HOME_QPOS_CTRL = ((HOME_QPOS_CLOSE, HOME_CTRL_CLOSE), (HOME_QPOS_OPEN, HOME_CTRL_OPEN))
 
 
 WRIST_CAMERA_POSITION: tuple[float, float, float] = (
@@ -446,10 +457,12 @@ class AlohaTask(composer.Task):
   ) -> None:
     arm_joints_bound = physics.bind(self._joints)
 
-    arm_joints_bound.qpos[:8] = HOME_QPOS
-    arm_joints_bound.qpos[8:] = HOME_QPOS
+    home_qpos_ctrl_index = 0 if random_state.rand() < 0.5 else 1
+    home_qpos, home_ctrl = HOME_QPOS_CTRL[home_qpos_ctrl_index]
+    arm_joints_bound.qpos[:8] = HOME_QPOS_OPEN
+    arm_joints_bound.qpos[8:] = home_qpos
 
-    np.copyto(physics.data.ctrl, np.concatenate([HOME_CTRL, HOME_CTRL]))
+    np.copyto(physics.data.ctrl, np.concatenate([HOME_CTRL_OPEN, home_ctrl]))
 
     for prop_placer in self._all_prop_placers:
       prop_placer(physics, random_state)

@@ -13,6 +13,7 @@ MARKER_BODY_NAME: str = "marker//unnamed_body_0"
 OBJECT_Z_OFFSET: float = -0.01
 APPROACH_Z_OFFSET: float = 0.1
 GRIPPER_CLOSE_STEPS: int = 10
+GRIPPER_OPEN_STEPS: int = 10
 
 # Collision sets
 GRIPPER_OBJECT_COLLISIONS = {
@@ -165,6 +166,7 @@ class State(IntEnum):
     """Defines the sequential states of the pick-and-place task."""
 
     PRE_APPROACH = auto()
+    OPEN_GRIPPER = auto()
     APPROACH = auto()
     CLOSE_GRIPPER = auto()
     RETREAT = auto()
@@ -244,6 +246,10 @@ class Policy:
                 self._approach_pose,
                 Planner.OMPL,
             )
+        elif state == State.OPEN_GRIPPER:
+            # Trajectory is a list of repeated "open" actions
+            close_qpos = self.aloha.right_arm.open_gripper(self.env.physics.data.qpos)
+            trajectory = [close_qpos] * GRIPPER_OPEN_STEPS
         elif state == State.APPROACH:
             trajectory = self.aloha.plan_to_pose(
                 self.aloha.right_arm,

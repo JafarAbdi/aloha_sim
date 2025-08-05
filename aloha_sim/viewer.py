@@ -62,7 +62,7 @@ from robot_learning.data_normalizer import DataNormalizer
 from robot_learning.dataset import DatasetMetadata, DatasetStatistics
 from robot_learning.utils import pretty_print_omegaconfig
 from omegaconf import OmegaConf, DictConfig
-from aloha_sim.tasks.base.aloha2_task import HOME_CTRL
+from aloha_sim.tasks.base.aloha2_task import HOME_CTRL_CLOSE, HOME_CTRL_OPEN
 from torchvision.transforms import v2 as torchvision_transforms
 import hydra
 from robot_learning.model_utils import timestep_observation_to_tensor
@@ -176,7 +176,7 @@ class TrainedPolicy:
             action = self.current_actions[self.current_index]
             self.current_index += 1
             return np.concatenate(
-                [HOME_CTRL, action]
+                [HOME_CTRL_OPEN, action]
             )  # Return the first action in the batch
         batched_obs = timestep_observation_to_tensor(
             observation, self.dataset_metadata, "cuda"
@@ -220,10 +220,10 @@ class TrainedPolicy:
             max_acceleration,
             max_jerk,
         )
-        # self.current_actions = totg.run(actions)
+        self.current_actions = totg.run(actions)
         self.current_index = 1
         return np.concatenate(
-            [HOME_CTRL, self.current_actions[0]]
+            [HOME_CTRL_OPEN, self.current_actions[0]]
         )  # Return the first action in the batch
 
     def reset(self) -> None:

@@ -60,13 +60,13 @@ class AlohaTaskTest(unittest.TestCase):
 
     # Assert that the initial position of the robot is within the action spec
     # limits.
-    home_ctrl = aloha2_task.HOME_CTRL
+    home_ctrl = aloha2_task.HOME_CTRL_CLOSE
     self.assertTrue(np.all(action_spec.minimum[:6] < home_ctrl[:6]))
     self.assertTrue(np.all(action_spec.minimum[7:13] < home_ctrl[:6]))
     self.assertTrue(np.all(action_spec.maximum[:6] > home_ctrl[:6]))
     self.assertTrue(np.all(action_spec.maximum[7:13] > home_ctrl[:6]))
 
-    home_qpos = aloha2_task.HOME_QPOS
+    home_qpos = aloha2_task.HOME_QPOS_CLOSE
     self.assertTrue(np.all(action_spec.minimum[:6] < home_qpos[:6]))
     self.assertTrue(np.all(action_spec.minimum[7:13] < home_qpos[:6]))
     self.assertTrue(np.all(action_spec.maximum[:6] > home_qpos[:6]))
@@ -77,7 +77,7 @@ class AlohaTaskTest(unittest.TestCase):
     action_spec = env.action_spec()
     gripper_close = action_spec.minimum[6]
     self.assertEqual(gripper_close, aloha2_task.FOLLOWER_GRIPPER_CLOSE)
-    action = np.concatenate([aloha2_task.HOME_CTRL, aloha2_task.HOME_CTRL])
+    action = np.concatenate([aloha2_task.HOME_CTRL_CLOSE, aloha2_task.HOME_CTRL_CLOSE])
     action[6] = gripper_close
     action[0] = action[7] = 0.1
     env.reset()
