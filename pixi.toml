@@ -15,8 +15,6 @@ viewer = { cmd = [
 
 [dependencies]
 python = ">=3.11,<3.12"
-# Used for time_optimal_trajectory_generation_py
-eigen = ">=3.4.0,<4"
 
 [pypi-dependencies]
 aloha_sim = { path = ".", editable = true, extras = ["dev"] }
